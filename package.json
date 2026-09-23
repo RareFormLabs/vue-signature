@@ -1,6 +1,6 @@
 {
   "name": "@rareformlabs/vue-signature",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A Vue 3 signature pad component with SVG and Canvas renderers.",
   "author": "RareFormLabs",
   "license": "MIT",
