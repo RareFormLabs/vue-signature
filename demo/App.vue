@@ -11,12 +11,19 @@ const readonly = ref(false);
 const showSample = ref(false);
 const size = ref(6);
 const smoothing = ref(0.46);
+const thinning = ref(0.73);
+const streamline = ref(0.5);
 const capturedStrokes = ref<Point[][]>([]);
 const signature = ref<SignatureExposed | null>(null);
 const canvasSignature = ref<CanvasSignatureExposed | null>(null);
 const sampleRevision = ref(0);
 
-const options = computed(() => ({ size: size.value, smoothing: smoothing.value }));
+const options = computed(() => ({
+  size: size.value,
+  smoothing: smoothing.value,
+  thinning: thinning.value,
+  streamline: streamline.value,
+}));
 const samplePoints: SignaturePoints = {
   sample: [
     [46, 117],
@@ -206,6 +213,31 @@ function handleStroke(points: Point[]) {
           <input
             id="stroke-smoothing"
             v-model.number="smoothing"
+            class="mt-3 w-full accent-indigo-600"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+          />
+          <label class="mt-6 block text-sm font-medium text-slate-700" for="stroke-thinning">
+            Thinning <span class="float-right tabular-nums text-slate-500">{{ thinning.toFixed(2) }}</span>
+          </label>
+          <input
+            id="stroke-thinning"
+            v-model.number="thinning"
+            class="mt-3 w-full accent-indigo-600"
+            type="range"
+            min="-1"
+            max="1"
+            step="0.01"
+          />
+          <label class="mt-6 block text-sm font-medium text-slate-700" for="stroke-streamline">
+            Streamline
+            <span class="float-right tabular-nums text-slate-500">{{ streamline.toFixed(2) }}</span>
+          </label>
+          <input
+            id="stroke-streamline"
+            v-model.number="streamline"
             class="mt-3 w-full accent-indigo-600"
             type="range"
             min="0"
