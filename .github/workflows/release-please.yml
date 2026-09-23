@@ -1,0 +1,103 @@
+name: release-please
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Release tag to publish (for example, vue-signature-v1.0.0)
+        required: true
+        type: string
+      dist_tag:
+        description: npm dist-tag; infer uses next for prereleases and latest otherwise
+        required: true
+        default: infer
+        type: choice
+        options:
+          - infer
+          - latest
+          - next
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release Please
+        if: github.event_name == 'push'
+        id: rp
+        uses: googleapis/release-please-action@v5
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Check out release
+        if: github.event_name == 'workflow_dispatch' || steps.rp.outputs.release_created == 'true'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || steps.rp.outputs.tag_name }}
+
+      - name: Set up Node
+        if: github.event_name == 'workflow_dispatch' || steps.rp.outputs.release_created == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install dependencies
+        if: github.event_name == 'workflow_dispatch' || steps.rp.outputs.release_created == 'true'
+        run: npm ci
+
+      - name: Update npm for trusted publishing
+        if: github.event_name == 'workflow_dispatch' || steps.rp.outputs.release_created == 'true'
+        run: npm install --global npm@latest
+
+      - name: Verify release
+        if: github.event_name == 'workflow_dispatch' || steps.rp.outputs.release_created == 'true'
+        env:
+          RELEASE_TAG: ${{ inputs.ref || steps.rp.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$RELEASE_TAG" =~ ^vue-signature-v(.+)$ ]]; then
+            TAG_VERSION="${BASH_REMATCH[1]}"
+          else
+            echo "Ref must be a vue-signature release tag, received: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if [[ "$VERSION" != "$TAG_VERSION" ]]; then
+            echo "package.json version $VERSION does not match release tag $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+      - name: Test
+        if: github.event_name == 'workflow_dispatch' || steps.rp.outputs.release_created == 'true'
+        run: npm test
+
+      - name: Build package
+        if: github.event_name == 'workflow_dispatch' || steps.rp.outputs.release_created == 'true'
+        run: npm run build
+
+      - name: Publish to npm
+        if: github.event_name == 'workflow_dispatch' || steps.rp.outputs.release_created == 'true'
+        env:
+          DIST_TAG: ${{ inputs.dist_tag }}
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="${DIST_TAG:-infer}"
+          if [[ -z "$TAG" || "$TAG" == "infer" ]]; then
+            if [[ "$VERSION" == *-* ]]; then TAG="next"; else TAG="latest"; fi
+          fi
+          echo "Publishing version $VERSION to npm dist-tag $TAG with trusted publishing"
+          npm publish --access public --provenance --tag "$TAG"

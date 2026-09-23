@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommits", "group:recommended"],
+  "labels": ["dependencies"],
+  "schedule": ["at any time"],
+  "rangeStrategy": "bump",
+  "prConcurrentLimit": 10,
+  "postUpdateOptions": ["npmInstallTwice"],
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Auto-merge low-risk dependency updates after they have aged for a week and CI is green.",
+      "matchUpdateTypes": ["minor", "patch", "lockFileMaintenance"],
+      "minimumReleaseAge": "7 days",
+      "automerge": true
+    },
+    {
+      "description": "Keep major dependency updates manual.",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "description": "Do not automatically modify the supported Vue peer range.",
+      "matchDepTypes": ["peerDependencies"],
+      "matchPackageNames": ["vue", "@vue/compiler-sfc"],
+      "enabled": false
+    }
+  ]
+}
